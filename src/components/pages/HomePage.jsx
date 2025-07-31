@@ -26,12 +26,29 @@ const HomePage = () => {
     }, 500);
   };
 
-  const generateRecipe = async (formData) => {
+const generateRecipe = async (formData) => {
     setLoading(true);
     setError("");
     setCurrentStep("loading");
 
     try {
+      // Validate environment variables
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+      const webhookUrl = import.meta.env.VITE_PABBLY_WEBHOOK_URL;
+      
+      if (!apiKey) {
+        throw new Error("Configuración de API faltante. Por favor contacta al administrador.");
+      }
+
+      // Validate form data
+      if (!formData.ingredientes?.trim()) {
+        throw new Error("Los ingredientes son requeridos para generar la receta.");
+      }
+      
+      if (!formData.sabor) {
+        throw new Error("La preferencia de sabor es requerida.");
+      }
+
       // Prepare content for OpenAI
       const recipeType = formData.tipoReceta === "comida" ? 
         `${formData.tipoComida || "comida saludable"}` : 
@@ -40,11 +57,11 @@ const HomePage = () => {
       const productosHerbalife = formData.tipoReceta === "bebida" ? 
         formData.productosHerbalife : "Ninguno";
 
-      // OpenAI API call
+      // OpenAI API call with improved error handling
       const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer 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",
+          "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -68,36 +85,60 @@ La receta debe ser sabrosa, sencilla y saludable. Si el usuario indicó producto
         })
       });
 
+      // Enhanced error handling for different response statuses
       if (!openAIResponse.ok) {
-        throw new Error("Error al generar la receta");
+        const errorData = await openAIResponse.json().catch(() => ({}));
+        
+        switch (openAIResponse.status) {
+          case 401:
+            throw new Error("Error de autenticación. Por favor contacta al administrador.");
+          case 429:
+            throw new Error("Servicio temporalmente ocupado. Por favor intenta en unos minutos.");
+          case 500:
+            throw new Error("Error del servidor. Por favor intenta nuevamente.");
+          default:
+            throw new Error(errorData.error?.message || "Error al conectar con el servicio de generación de recetas.");
+        }
       }
 
       const openAIData = await openAIResponse.json();
+      
+      // Validate response structure
+      if (!openAIData.choices?.[0]?.message?.content) {
+        throw new Error("Respuesta inválida del servicio. Por favor intenta nuevamente.");
+      }
+      
       const recipeContent = openAIData.choices[0].message.content;
-
       setGeneratedRecipe(recipeContent);
 
-      // Send data to Pabbly webhook
-      try {
-        await fetch("https://connect.pabbly.com/workflow/sendwebhookdata/IjU3NjYwNTZhMDYzMjA0MzA1MjZhNTUzMjUxMzQi_pc", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            nombre: formData.nombre,
-            contacto: formData.contacto,
-            tipo_receta: recipeType,
-            ingredientes: formData.ingredientes,
-            restricciones: formData.restricciones || "Ninguna",
-            sabor: formData.sabor,
-            productos_herbalife: productosHerbalife,
-            receta_generada: recipeContent
-          })
-        });
-      } catch (webhookError) {
-        console.warn("Error sending to webhook:", webhookError);
-        // Don't block the user experience if webhook fails
+      // Send data to Pabbly webhook with improved error handling
+      if (webhookUrl) {
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              nombre: formData.nombre,
+              contacto: formData.contacto,
+              tipo_receta: recipeType,
+              ingredientes: formData.ingredientes,
+              restricciones: formData.restricciones || "Ninguna",
+              sabor: formData.sabor,
+              productos_herbalife: productosHerbalife,
+              receta_generada: recipeContent,
+              timestamp: new Date().toISOString()
+            })
+          });
+          
+          if (!webhookResponse.ok) {
+            console.warn("Webhook failed:", webhookResponse.status);
+          }
+        } catch (webhookError) {
+          console.warn("Error sending to webhook:", webhookError);
+          // Don't block the user experience if webhook fails
+        }
       }
 
       setCurrentStep("recipe");
@@ -105,14 +146,14 @@ La receta debe ser sabrosa, sencilla y saludable. Si el usuario indicó producto
 
     } catch (error) {
       console.error("Error generating recipe:", error);
-      setError(error.message || "Error al generar la receta");
+      const errorMessage = error.message || "Error inesperado al generar la receta";
+      setError(errorMessage);
       setCurrentStep("error");
-      toast.error("Error al generar la receta. Por favor intenta nuevamente.");
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
-
   const handleNewRecipe = () => {
     setCurrentStep("welcome");
     setSelectedType("");

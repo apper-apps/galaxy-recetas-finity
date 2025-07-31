@@ -29,39 +29,85 @@ const RecipeForm = ({ recipeType, onSubmit, loading }) => {
     }
   };
 
-  const validateForm = () => {
+const validateForm = () => {
     const newErrors = {};
 
+    // Recipe type validation
     if (recipeType === "comida" && !formData.tipoComida) {
       newErrors.tipoComida = "Por favor selecciona el tipo de comida";
     }
     if (recipeType === "bebida" && !formData.tipoBebida) {
       newErrors.tipoBebida = "Por favor selecciona el tipo de bebida";
     }
-    if (!formData.ingredientes.trim()) {
+    
+    // Ingredients validation with enhanced checking
+    if (!formData.ingredientes?.trim()) {
       newErrors.ingredientes = "Por favor indica los ingredientes disponibles";
+    } else if (formData.ingredientes.trim().length < 5) {
+      newErrors.ingredientes = "Por favor describe los ingredientes con más detalle";
     }
+    
+    // Flavor validation
     if (!formData.sabor) {
       newErrors.sabor = "Por favor selecciona tu preferencia de sabor";
     }
+    
+    // Herbalife products validation for drinks
     if (recipeType === "bebida" && !formData.productosHerbalife) {
       newErrors.productosHerbalife = "Por favor selecciona el producto Herbalife";
     }
-    if (!formData.nombre.trim()) {
+    
+    // Name validation with enhanced checking
+    if (!formData.nombre?.trim()) {
       newErrors.nombre = "Por favor ingresa tu nombre";
+    } else if (formData.nombre.trim().length < 2) {
+      newErrors.nombre = "El nombre debe tener al menos 2 caracteres";
     }
-    if (!formData.contacto.trim()) {
+    
+    // Contact validation with format checking
+    if (!formData.contacto?.trim()) {
       newErrors.contacto = "Por favor ingresa tu teléfono o correo";
+    } else {
+      const contactValue = formData.contacto.trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      
+      if (contactValue.length < 5) {
+        newErrors.contacto = "El contacto debe tener al menos 5 caracteres";
+      } else if (!emailRegex.test(contactValue) && !phoneRegex.test(contactValue)) {
+        newErrors.contacto = "Por favor ingresa un email válido o un número de teléfono";
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+const handleSubmit = (e) => {
+    e?.preventDefault();
+    
+    // Additional safety check before validation
+    if (!formData || typeof formData !== 'object') {
+      console.error('Form data is invalid:', formData);
+      return;
+    }
+    
     if (validateForm()) {
-      onSubmit({ ...formData, tipoReceta: recipeType });
+      // Ensure all required fields are properly formatted
+      const sanitizedData = {
+        ...formData,
+        tipoReceta: recipeType,
+        ingredientes: formData.ingredientes?.trim() || '',
+        restricciones: formData.restricciones?.trim() || '',
+        nombre: formData.nombre?.trim() || '',
+        contacto: formData.contacto?.trim() || '',
+        sabor: formData.sabor || '',
+        tipoComida: formData.tipoComida || '',
+        tipoBebida: formData.tipoBebida || '',
+        productosHerbalife: formData.productosHerbalife || ''
+      };
+      
+      onSubmit(sanitizedData);
     }
   };
 
