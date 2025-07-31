@@ -6,7 +6,7 @@ import RecipeTypeSelector from "@/components/organisms/RecipeTypeSelector";
 import RecipeForm from "@/components/organisms/RecipeForm";
 import RecipeDisplay from "@/components/organisms/RecipeDisplay";
 import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
+import ErrorDisplay from "@/components/ui/Error";
 
 const HomePage = () => {
   const [currentStep, setCurrentStep] = useState("welcome"); // welcome, selector, form, loading, recipe
@@ -208,7 +208,7 @@ La receta debe ser sabrosa, sencilla y saludable. Si el usuario indicó producto
             variants={pageVariants}
             transition={pageTransition}
           >
-            <Error 
+<ErrorDisplay 
               message={error}
               onRetry={handleRetry}
             />

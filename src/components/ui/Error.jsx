@@ -3,7 +3,7 @@ import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import ApperIcon from "@/components/ApperIcon";
 
-const Error = ({ 
+const ErrorDisplay = ({ 
   message = "Algo salió mal al generar tu receta", 
   onRetry,
   showRetry = true 
@@ -84,4 +84,4 @@ const Error = ({
   );
 };
 
-export default Error;
+export default ErrorDisplay;
