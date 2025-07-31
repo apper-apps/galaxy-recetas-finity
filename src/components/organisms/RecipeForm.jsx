@@ -68,9 +68,9 @@ const validateForm = () => {
     if (!formData.contacto?.trim()) {
       newErrors.contacto = "Por favor ingresa tu teléfono o correo";
     } else {
-      const contactValue = formData.contacto.trim();
+const contactValue = formData.contacto.trim();
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      const phoneRegex = /^[\d\s\-+()]+$/;
       
       if (contactValue.length < 5) {
         newErrors.contacto = "El contacto debe tener al menos 5 caracteres";
